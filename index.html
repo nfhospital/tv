@@ -26,7 +26,16 @@ iframe {
 
 <body>
 
-<iframe src="https://script.google.com/macros/s/AKfycbwjTsOVhBmuhfW3gtnVbQ9mJC3agWvtTzvC_k_D8Z4cYJhIKqoQCRlnc2Wcy1Ve7OmyKw/exec?tv=TV_1"></iframe>
+<iframe id="tv"></iframe>
+
+<script>
+
+const tv = new URLSearchParams(window.location.search).get("tv") || "TV_1";
+
+document.getElementById("tv").src =
+"https://script.google.com/macros/s/AKfycbwjTsOVhBmuhfW3gtnVbQ9mJC3agWvtTzvC_k_D8Z4cYJhIKqoQCRlnc2Wcy1Ve7OmyKw/exec?tv=" + tv;
+
+</script>
 
 </body>
 </html>
