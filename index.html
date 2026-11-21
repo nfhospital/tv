@@ -1,41 +1,615 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Hospital Digital TV</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #041010; color: #ffffff;
+      font-family: 'Poppins', sans-serif;
+    }
 
-<style>
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: black;
-}
+    /* TV Players */
+    .player-layer {
+      position: fixed; inset: 0; width: 100vw; height: 100vh;
+      background: #000; pointer-events: none;
+    }
+    #main-layer { z-index: 10; }
+    #ad-layer { z-index: 20; display: none; }
+    .player-layer iframe { width: 100%; height: 100%; border: none; }
 
-iframe {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    border: none;
-}
-</style>
+    /* Live / Ad Corner Badge */
+    #status-badge {
+      position: fixed; top: 22px; right: 26px; z-index: 35;
+      padding: 6px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; display: none;
+      backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+    .badge-live { background: rgba(220, 38, 38, 0.9); color: #fff; animation: pulse 1.5s infinite; }
+    .badge-ad { background: rgba(7, 140, 128, 0.9); color: #fff; }
+
+    /* Small Unmute Pill (Shows ONLY if browser blocks sound) */
+    #unmute-pill {
+      position: fixed; bottom: 28px; right: 28px; z-index: 55;
+      display: none; background: rgba(7, 140, 128, 0.95); color: #fff;
+      border: 2px solid #5eead4; border-radius: 40px; padding: 12px 24px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.5); animation: pulse 1.8s infinite;
+    }
+
+    /* Sun TV Style Broadcast Bumper Animation */
+    #bumper-overlay {
+      position: fixed; inset: 0; z-index: 60; display: none;
+      align-items: center; justify-content: center; overflow: hidden;
+      background: linear-gradient(135deg, #031f1d 0%, #078c80 50%, #042f2e 100%);
+    }
+    .bumper-sweep {
+      position: absolute; width: 160%; height: 160%;
+      background: conic-gradient(from 0deg, transparent 0%, rgba(45, 212, 191, 0.28) 20%, transparent 40%, rgba(251, 191, 36, 0.22) 65%, transparent 85%);
+      animation: spinSweep 3s linear infinite;
+    }
+    .bumper-ring {
+      position: absolute; width: 420px; height: 420px; border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 0 80px rgba(45, 212, 191, 0.5), inset 0 0 60px rgba(255, 255, 255, 0.15);
+      animation: ringExpand 2.2s ease-out forwards;
+    }
+    .bumper-content {
+      position: relative; z-index: 2; text-align: center;
+      animation: zoomFade 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .bumper-kicker {
+      display: inline-block; background: #fbbf24; color: #041010;
+      padding: 6px 22px; border-radius: 30px; font-size: 1rem; font-weight: 800;
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px;
+    }
+    .bumper-main-text {
+      font-size: 4.2rem; font-weight: 900; letter-spacing: 4px;
+      text-transform: uppercase; text-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      background: linear-gradient(to right, #ffffff, #ccfbf1, #fde68a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .bumper-bar {
+      width: 240px; height: 6px; margin: 22px auto 0; border-radius: 6px;
+      background: linear-gradient(90deg, transparent, #fbbf24, #ffffff, #2dd4bf, transparent);
+      animation: barGlow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes spinSweep { to { transform: rotate(360deg); } }
+    @keyframes ringExpand {
+      0% { transform: scale(0.4); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+    @keyframes zoomFade {
+      0% { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes barGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    /* Dashboard */
+    #dashboard {
+      display: none; padding: 40px 20px; height: 100vh; overflow-y: auto; text-align: center;
+      background: radial-gradient(circle at top, #0a2e2b 0%, #041010 100%);
+    }
+    .dash-title { font-size: 2.3rem; font-weight: 800; color: #2dd4bf; margin-bottom: 8px; }
+    .dash-sub { color: #94a3b8; margin-bottom: 35px; }
+    .tv-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1100px; margin: 0 auto; }
+    .tv-card {
+      background: rgba(15, 35, 34, 0.9); border: 2px solid #078c80; border-radius: 16px;
+      padding: 25px; width: 270px; text-decoration: none; color: #fff;
+      transition: 0.25s; box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    }
+    .tv-card:hover, .tv-card:focus { transform: translateY(-5px); border-color: #2dd4bf; background: #0d3b37; }
+    .tv-card h2 { color: #2dd4bf; font-size: 1.5rem; margin-bottom: 6px; }
+    .tv-card p { color: #cbd5e1; font-size: 0.95rem; margin-bottom: 10px; }
+    .tv-meta { font-size: 0.8rem; color: #fbbf24; font-weight: 600; }
+
+    /* Message Box */
+    #msg-box {
+      position: fixed; inset: 0; z-index: 40; display: none;
+      align-items: center; justify-content: center; text-align: center;
+      background: #041010; padding: 30px;
+    }
+  </style>
 </head>
-
 <body>
 
-<iframe id="tv"></iframe>
+  <!-- Dashboard View -->
+  <div id="dashboard">
+    <h1 class="dash-title">📺 Hospital Digital TV Control</h1>
+    <p class="dash-sub">Select a TV to launch its channel</p>
+    <div id="tv-grid" class="tv-grid"><p>Loading TVs...</p></div>
+  </div>
 
-<script>
+  <!-- Main Entertainment / Live Player -->
+  <div id="main-layer" class="player-layer"><div id="main-player"></div></div>
 
-const tv = new URLSearchParams(window.location.search).get("tv") || "TV_1";
+  <!-- Hospital Ad Overlay Player -->
+  <div id="ad-layer" class="player-layer"><div id="ad-player"></div></div>
 
-document.getElementById("tv").src =
-"https://script.google.com/macros/s/AKfycbwjTsOVhBmuhfW3gtnVbQ9mJC3agWvtTzvC_k_D8Z4cYJhIKqoQCRlnc2Wcy1Ve7OmyKw/exec?tv=" + tv;
+  <!-- Corner Badge -->
+  <div id="status-badge"></div>
 
-</script>
+  <!-- Fallback Unmute Pill (Only appears if browser blocks sound) -->
+  <button id="unmute-pill">🔇 Press OK for Sound</button>
 
+  <!-- Sun TV Style Bumper Animation -->
+  <div id="bumper-overlay">
+    <div class="bumper-sweep"></div>
+    <div class="bumper-ring"></div>
+    <div class="bumper-content">
+      <div class="bumper-kicker" id="bumper-kicker">HEALTH UPDATE</div>
+      <div class="bumper-main-text" id="bumper-text">SHORT BREAK</div>
+      <div class="bumper-bar"></div>
+    </div>
+  </div>
+
+  <!-- Status / Error Message -->
+  <div id="msg-box"><h2 id="msg-text" style="color:#f87171; font-size:2rem;"></h2></div>
+
+  <script>
+    // =========================================================================
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+    // =========================================================================
+    const SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbyrKRdYKZ4hiS0DCCzKCIIo3vEI77NvXpptdF35Mlg3r3xQHs240UcW9ZHA-99k4wlf3g/exec";
+    // =========================================================================
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const TV_ID = (urlParams.get("tv") || "").trim();
+    const STORAGE_KEY = "HOSP_TV_STATE_" + TV_ID;
+
+    let appData = null;
+    let mainPlayer = null;
+    let adPlayer = null;
+    let mainReady = false;
+    let ytReady = false;
+    let started = false;
+    let isAdPlaying = false;
+    let isLivePlaying = false;
+    let resumeTime = 0;
+    let adTimer = null;
+    let saveTimer = null;
+    let audioCtx = null;
+
+   let state = {
+      patternIdx: 0,
+      countInStep: 0,
+      currentVideoId: "",
+      currentTime: 0,
+      queues: {},
+      adQueue: [],
+      knownAds: [],
+      knownLibs: {}
+    };
+
+    // --- 1. INITIALIZATION ---
+    if (!TV_ID) {
+      loadDashboard();
+    } else {
+      loadSavedState();
+      loadYouTubeAPI();
+      fetchConfig(true);
+      setInterval(() => fetchConfig(false), 120000);
+    }
+
+    function loadDashboard() {
+      document.getElementById("dashboard").style.display = "block";
+      fetch(SCRIPT_API_URL)
+        .then(r => r.json())
+        .then(res => {
+          const grid = document.getElementById("tv-grid");
+          if (!res.tvs || res.tvs.length === 0) {
+            grid.innerHTML = "<p>No TVs found in Master_TV_List.</p>";
+            return;
+          }
+          grid.innerHTML = res.tvs.map(tv => `
+            <a class="tv-card" href="?tv=${encodeURIComponent(tv.id)}">
+              <h2>${tv.id}</h2>
+              <p>${tv.location}</p>
+              <div class="tv-meta">Mode: ${tv.mode} | Ads: ${tv.adInterval}m</div>
+            </a>
+          `).join("");
+        })
+        .catch(() => {
+          document.getElementById("tv-grid").innerHTML = "<p style='color:#f87171'>Failed to connect to Google Sheet API.</p>";
+        });
+    }
+
+    function loadYouTubeAPI() {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    }
+
+    function onYouTubeIframeAPIReady() {
+      ytReady = true;
+      initPlayersIfReady();
+    }
+
+    function fetchConfig(isInitial) {
+      fetch(`${SCRIPT_API_URL}?tv=${encodeURIComponent(TV_ID)}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res.status !== "ok") {
+            showMessage(res.message || "Configuration error");
+            return;
+          }
+          hideMessage();
+          const prevMode = appData ? appData.tv.mode : null;
+          const prevLiveId = appData ? appData.liveVideoId : null;
+          const prevAdInterval = appData ? appData.tv.adInterval : null;
+          appData = res;
+
+          if (appData.tv.status === "OFF") {
+            showMessage("TV is currently turned OFF in Master_TV_List.");
+            if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
+            return;
+          }
+
+          if (isInitial) {
+            initPlayersIfReady();
+          } else if (started) {
+            if (appData.tv.mode !== prevMode || (appData.tv.mode === "LIVE" && appData.liveVideoId !== prevLiveId)) {
+              handleModePlayback(false);
+            }
+            if (appData.tv.adInterval !== prevAdInterval && !isAdPlaying && !isLivePlaying) {
+              scheduleNextAd();
+            }
+          }
+        })
+        .catch(err => console.error("API sync error:", err));
+    }
+// Pudhusa add aagura Ads & Videos-a wait pannama immediate-a queue-la serkkum
+    function syncNewItemsToQueues() {
+      if (!appData) return;
+
+      // 1. Hospital Ads (Regular + Today's Special Day Ads -> Direct-a FRONT-la add aagum)
+      const activeAdIds = (appData.ads || []).map(a => a.id);
+      if (!Array.isArray(state.knownAds)) state.knownAds = [];
+      if (state.knownAds.length === 0 && state.adQueue.length > 0) {
+        state.knownAds = [...state.adQueue];
+      }
+
+      const newAds = activeAdIds.filter(id => !state.knownAds.includes(id));
+      if (newAds.length > 0) {
+        state.adQueue = state.adQueue.filter(id => activeAdIds.includes(id));
+        // Pudhu ads-a shuffle panni queue-oda 1st-la vakkiradhu (Next break-laye play aagum!)
+        shuffleArray(newAds).forEach(id => {
+          if (!state.adQueue.includes(id)) state.adQueue.unshift(id);
+        });
+      }
+      state.knownAds = [...activeAdIds];
+
+      // 2. Movies / Songs / Comedy / Programs (Running queue-la random-a mix aagum)
+      if (!state.knownLibs) state.knownLibs = {};
+      Object.keys(appData.libraries || {}).forEach(cat => {
+        const pool = appData.libraries[cat] || [];
+        const prevKnown = state.knownLibs[cat] || [];
+
+        if (prevKnown.length > 0 && Array.isArray(state.queues[cat])) {
+          const newVids = pool.filter(id => !prevKnown.includes(id));
+          newVids.forEach(id => {
+            if (!state.queues[cat].includes(id)) {
+              const randIdx = Math.floor(Math.random() * (state.queues[cat].length + 1));
+              state.queues[cat].splice(randIdx, 0, id);
+            }
+          });
+        }
+        state.knownLibs[cat] = [...pool];
+      });
+
+      saveState();
+    }
+    function initPlayersIfReady() {
+      if (!ytReady || !appData || mainPlayer) return;
+
+      mainPlayer = new YT.Player("main-player", {
+        host: "https://www.youtube-nocookie.com",
+        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, disablekb: 1 },
+        events: {
+          onReady: () => {
+            mainReady = true;
+            autoStartTV();
+          },
+          onStateChange: onMainStateChange,
+          onError: () => { if (!isLivePlaying) setTimeout(playNextProgram, 1000); }
+        }
+      });
+
+      adPlayer = new YT.Player("ad-player", {
+        host: "https://www.youtube-nocookie.com",
+        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, disablekb: 1 },
+        events: {
+          onStateChange: onAdStateChange,
+          onError: () => { if (isAdPlaying) finishAdAndResume(); }
+        }
+      });
+    }
+
+    // --- 2. AUTOMATIC START (NO START BUTTON REQUIRED) ---
+    function autoStartTV() {
+      if (started || !mainReady || !appData) return;
+      started = true;
+
+      // Try unmuted auto-start first
+      mainPlayer.unMute();
+      mainPlayer.setVolume(100);
+      handleModePlayback(true);
+      startStateSaver();
+
+      // Check after 2.5 seconds if browser blocked unmuted autoplay
+      setTimeout(() => {
+        if (!mainPlayer || typeof mainPlayer.getPlayerState !== "function") return;
+        const pState = mainPlayer.getPlayerState();
+        // If browser paused it (-1 unstarted or 2 paused or 5 cued), start muted & show subtle unmute pill
+        if (pState !== YT.PlayerState.PLAYING && pState !== YT.PlayerState.BUFFERING) {
+          mainPlayer.mute();
+          mainPlayer.playVideo();
+          document.getElementById("unmute-pill").style.display = "block";
+        } else if (mainPlayer.isMuted && mainPlayer.isMuted()) {
+          document.getElementById("unmute-pill").style.display = "block";
+        }
+      }, 2500);
+    }
+
+    function unlockAudio() {
+      document.getElementById("unmute-pill").style.display = "none";
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
+      } catch (e) {}
+      if (mainPlayer && mainPlayer.unMute) {
+        mainPlayer.unMute();
+        mainPlayer.setVolume(100);
+      }
+      if (adPlayer && adPlayer.unMute) {
+        adPlayer.unMute();
+        adPlayer.setVolume(100);
+      }
+    }
+
+    document.getElementById("unmute-pill").addEventListener("click", unlockAudio);
+    document.addEventListener("click", unlockAudio);
+    document.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") unlockAudio();
+    });
+
+    // --- 3. MODE & SMART ROTATION ENGINE ---
+    function handleModePlayback(tryResume) {
+      if (appData.tv.mode === "LIVE" && appData.liveVideoId) {
+        isLivePlaying = true;
+        clearTimeout(adTimer);
+        if (isAdPlaying) {
+          document.getElementById("ad-layer").style.display = "none";
+          isAdPlaying = false;
+        }
+        showBadge("● LIVE", "badge-live");
+        mainPlayer.loadVideoById(appData.liveVideoId);
+      } else {
+        isLivePlaying = false;
+        hideBadge();
+
+        if (tryResume && state.currentVideoId && isVideoStillInLibrary(state.currentVideoId)) {
+          mainPlayer.loadVideoById({ videoId: state.currentVideoId, startSeconds: Math.floor(state.currentTime || 0) });
+        } else {
+          playNextProgram();
+        }
+        scheduleNextAd();
+      }
+    }
+
+    function playNextProgram() {
+      if (!appData || !appData.pattern.length) return;
+      const pattern = appData.pattern;
+
+      for (let attempt = 0; attempt < pattern.length; attempt++) {
+        if (state.patternIdx >= pattern.length) {
+          state.patternIdx = 0;
+          state.countInStep = 0;
+        }
+        const step = pattern[state.patternIdx];
+        const vid = getNextFromCategory(step.category);
+
+        state.countInStep++;
+        if (state.countInStep >= step.count) {
+          state.patternIdx = (state.patternIdx + 1) % pattern.length;
+          state.countInStep = 0;
+        }
+
+        if (vid) {
+          state.currentVideoId = vid;
+          state.currentTime = 0;
+          saveState();
+          mainPlayer.loadVideoById(vid);
+          return;
+        }
+      }
+      showMessage("No videos found in configured sheets. Please add YouTube links.");
+    }
+
+    function getNextFromCategory(category) {
+      const pool = (appData.libraries && appData.libraries[category]) ? appData.libraries[category] : [];
+      if (pool.length === 0) return null;
+
+      let q = (state.queues[category] || []).filter(id => pool.includes(id));
+      if (q.length === 0) {
+        q = shuffleArray([...pool]);
+        if (q.length > 1 && q[0] === state.currentVideoId) {
+          q.push(q.shift());
+        }
+      }
+      const nextId = q.shift();
+      state.queues[category] = q;
+      return nextId;
+    }
+
+    function isVideoStillInLibrary(vid) {
+      if (!appData || !appData.libraries) return false;
+      return Object.values(appData.libraries).some(arr => arr.includes(vid));
+    }
+
+    function onMainStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED && !isLivePlaying && !isAdPlaying) {
+        playNextProgram();
+      }
+    }
+
+    // --- 4. HOSPITAL ADS + SUN TV BUMPER ANIMATION ---
+    function scheduleNextAd() {
+      clearTimeout(adTimer);
+      const mins = Number(appData.tv.adInterval) || 0;
+      if (mins <= 0 || isLivePlaying) return;
+      adTimer = setTimeout(triggerHospitalAd, mins * 60 * 1000);
+    }
+
+    function getNextAdId() {
+      const activeIds = (appData.ads || []).map(a => a.id);
+      if (activeIds.length === 0) return null;
+
+      state.adQueue = (state.adQueue || []).filter(id => activeIds.includes(id));
+      if (state.adQueue.length === 0) {
+        state.adQueue = shuffleArray([...activeIds]);
+      }
+      const adId = state.adQueue.shift();
+      saveState();
+      return adId;
+    }
+
+    function triggerHospitalAd() {
+      if (isLivePlaying || isAdPlaying) return;
+      const adId = getNextAdId();
+      if (!adId) {
+        scheduleNextAd();
+        return;
+      }
+
+      isAdPlaying = true;
+      if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+        resumeTime = mainPlayer.getCurrentTime() || 0;
+        mainPlayer.pauseVideo();
+      }
+
+      playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
+        document.getElementById("ad-layer").style.display = "block";
+        showBadge("HOSPITAL INFO", "badge-ad");
+        if (adPlayer && adPlayer.unMute && (!mainPlayer.isMuted || !mainPlayer.isMuted())) {
+          adPlayer.unMute();
+          adPlayer.setVolume(100);
+        } else if (adPlayer && adPlayer.mute) {
+          adPlayer.mute();
+        }
+        adPlayer.loadVideoById(adId);
+      });
+    }
+
+    function onAdStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED && isAdPlaying) {
+        finishAdAndResume();
+      }
+    }
+
+    function finishAdAndResume() {
+      if (!isAdPlaying) return;
+      hideBadge();
+      if (adPlayer && adPlayer.stopVideo) adPlayer.stopVideo();
+
+      playBumper("WELCOME BACK", "NOW PLAYING", () => {
+        document.getElementById("ad-layer").style.display = "none";
+        isAdPlaying = false;
+        if (!isLivePlaying && mainPlayer) {
+          mainPlayer.seekTo(resumeTime, true);
+          mainPlayer.playVideo();
+          scheduleNextAd();
+        }
+      });
+    }
+
+    function playBumper(kicker, title, callback) {
+      const overlay = document.getElementById("bumper-overlay");
+      document.getElementById("bumper-kicker").textContent = kicker;
+      document.getElementById("bumper-text").textContent = title;
+
+      overlay.style.display = "none";
+      void overlay.offsetWidth;
+      overlay.style.display = "flex";
+
+      playBroadcastChime();
+      setTimeout(() => {
+        overlay.style.display = "none";
+        if (callback) callback();
+      }, 2400);
+    }
+
+    function playBroadcastChime() {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      const now = audioCtx.currentTime;
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + i * 0.11);
+        gain.gain.setValueAtTime(0.001, now + i * 0.11);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + i * 0.11 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.55);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.11);
+        osc.stop(now + i * 0.11 + 0.6);
+      });
+    }
+
+    // --- 5. POWER-CUT AUTO-SAVE & HELPERS ---
+    function startStateSaver() {
+      clearInterval(saveTimer);
+      saveTimer = setInterval(() => {
+        if (!isAdPlaying && !isLivePlaying && mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+          const t = mainPlayer.getCurrentTime();
+          if (t > 1) {
+            state.currentTime = t;
+            saveState();
+          }
+        }
+      }, 5000);
+    }
+
+    function saveState() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function loadSavedState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) state = Object.assign(state, JSON.parse(saved));
+      } catch (e) {}
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function showBadge(text, cls) {
+      const b = document.getElementById("status-badge");
+      b.textContent = text;
+      b.className = cls;
+      b.style.display = "block";
+    }
+    function hideBadge() { document.getElementById("status-badge").style.display = "none"; }
+    function showMessage(txt) {
+      document.getElementById("msg-text").textContent = txt;
+      document.getElementById("msg-box").style.display = "flex";
+    }
+    function hideMessage() { document.getElementById("msg-box").style.display = "none"; }
+  </script>
 </body>
 </html>
