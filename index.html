@@ -132,7 +132,8 @@
 
   <!-- Main Entertainment / Live Player -->
   <div id="main-layer" class="player-layer"><div id="main-player"></div></div>
-
+<!-- Permanent Channel Live Layer -->
+  <div id="live-layer" class="player-layer" style="z-index: 15; display: none;"></div>
   <!-- Hospital Ad Overlay Player -->
   <div id="ad-layer" class="player-layer"><div id="ad-player"></div></div>
 
@@ -401,10 +402,11 @@ function getLiveEmbedUrl(targetId) {
           isAdPlaying = false;
         }
         showBadge("● LIVE", "badge-live");
-        mainPlayer.loadVideoById(appData.liveVideoId);
-        scheduleNextAd(); // Live News odumbodhum Ad timer run aagum
+        loadLiveChannel(appData.liveVideoId);
+        scheduleNextAd();
       } else {
         isLivePlaying = false;
+        stopLiveChannelLayer();
         hideBadge();
 
         if (tryResume && state.currentVideoId && isVideoStillInLibrary(state.currentVideoId)) {
@@ -417,7 +419,6 @@ function getLiveEmbedUrl(targetId) {
         scheduleNextAd();
       }
     }
-
     function playNextProgram() {
       if (!appData || !appData.pattern.length) return;
       const pattern = appData.pattern;
@@ -491,36 +492,9 @@ function getLiveEmbedUrl(targetId) {
       }
 
       isAdPlaying = true;
-      if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
-        if (!isLivePlaying) resumeTime = mainPlayer.getCurrentTime() || 0;
-        mainPlayer.pauseVideo();
-      }
-
-      playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
-        document.getElementById("ad-layer").style.display = "block";
-        showBadge("HOSPITAL INFO", "badge-ad");
-        if (adPlayer && adPlayer.unMute && (!mainPlayer.isMuted || !mainPlayer.isMuted())) {
-          adPlayer.unMute();
-          adPlayer.setVolume(100);
-        } else if (adPlayer && adPlayer.mute) {
-          adPlayer.mute();
-        }
-        adPlayer.loadVideoById(adId);
-      });
-    }
-    function triggerHospitalAd() {
-      if (isAdPlaying) return;
-      const adId = getNextAdId();
-      if (!adId) {
-        scheduleNextAd();
-        return;
-      }
-
-      isAdPlaying = true;
-
       if (isLivePlaying) {
-        // Live News audio overlap aagama temporary-a stop panrom
-        document.getElementById("live-iframe").src = "about:blank";
+        stopLiveChannelLayer();
+        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
       } else if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
         resumeTime = mainPlayer.getCurrentTime() || 0;
         mainPlayer.pauseVideo();
@@ -542,7 +516,7 @@ function getLiveEmbedUrl(targetId) {
       }
     }
 
-  function finishAdAndResume() {
+function finishAdAndResume() {
       if (!isAdPlaying) return;
       hideBadge();
       if (adPlayer && adPlayer.stopVideo) adPlayer.stopVideo();
@@ -550,16 +524,14 @@ function getLiveEmbedUrl(targetId) {
       playBumper("WELCOME BACK", isLivePlaying ? "LIVE NEWS" : "NOW PLAYING", () => {
         document.getElementById("ad-layer").style.display = "none";
         isAdPlaying = false;
-        if (mainPlayer) {
-          if (isLivePlaying && appData.liveVideoId) {
-            showBadge("● LIVE", "badge-live");
-            mainPlayer.loadVideoById(appData.liveVideoId); // Jump back to live edge
-          } else {
-            mainPlayer.seekTo(resumeTime, true);
-            mainPlayer.playVideo();
-          }
-          scheduleNextAd();
+        if (isLivePlaying && appData.liveVideoId) {
+          showBadge("● LIVE", "badge-live");
+          loadLiveChannel(appData.liveVideoId);
+        } else if (mainPlayer) {
+          mainPlayer.seekTo(resumeTime, true);
+          mainPlayer.playVideo();
         }
+        scheduleNextAd();
       });
     }
 
@@ -578,7 +550,24 @@ function getLiveEmbedUrl(targetId) {
         if (callback) callback();
       }, 2400);
     }
-
+function loadLiveChannel(liveVal) {
+      const liveLayer = document.getElementById("live-layer");
+      if (liveVal.startsWith("CHANNEL:")) {
+        const chId = liveVal.replace("CHANNEL:", "");
+        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
+        liveLayer.style.display = "block";
+        liveLayer.innerHTML = `<iframe src="https://www.youtube.com/embed/live_stream?channel=${chId}&autoplay=1&controls=0&rel=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+      } else {
+        liveLayer.style.display = "none";
+        liveLayer.innerHTML = "";
+        mainPlayer.loadVideoById(liveVal);
+      }
+    }
+    function stopLiveChannelLayer() {
+      const liveLayer = document.getElementById("live-layer");
+      liveLayer.style.display = "none";
+      liveLayer.innerHTML = "";
+    }
     function playBroadcastChime() {
       if (!audioCtx || audioCtx.state !== "running") return;
       const notes = [523.25, 659.25, 783.99, 1046.50];
