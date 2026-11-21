@@ -508,22 +508,27 @@ function getLiveEmbedUrl(targetId) {
       }
 
       isAdPlaying = true;
-      if (isLivePlaying) {
-        stopLiveChannelLayer();
-        if (mainPlayer && mainPlayer.stopVideo) mainPlayer.stopVideo();
-      } else if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+
+      // Save main video time only in AUTO mode; in LIVE mode just mute it cleanly
+      if (!isLivePlaying && mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
         resumeTime = mainPlayer.getCurrentTime() || 0;
         if (mainPlayer.pauseVideo) mainPlayer.pauseVideo();
+      } else if (mainPlayer && mainPlayer.mute) {
+        mainPlayer.mute();
       }
 
       playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
-        document.getElementById("ad-layer").style.display = "block";
+        const adLayer = document.getElementById("ad-layer");
+        adLayer.style.display = "block";
         showBadge("HOSPITAL INFO", "badge-ad");
+
         if (adPlayer && adPlayer.unMute) {
           adPlayer.unMute();
           adPlayer.setVolume(100);
         }
-        adPlayer.loadVideoById(adId);
+        if (adPlayer && adPlayer.loadVideoById) {
+          adPlayer.loadVideoById(adId);
+        }
       });
     }
     function onAdStateChange(event) {
@@ -535,19 +540,32 @@ function getLiveEmbedUrl(targetId) {
 function finishAdAndResume() {
       if (!isAdPlaying) return;
       hideBadge();
-      if (adPlayer && adPlayer.stopVideo) adPlayer.stopVideo();
+      if (adPlayer && adPlayer.stopVideo) {
+        try { adPlayer.stopVideo(); } catch (e) {}
+      }
 
       playBumper("WELCOME BACK", isLivePlaying ? "LIVE NEWS" : "NOW PLAYING", () => {
         document.getElementById("ad-layer").style.display = "none";
         isAdPlaying = false;
-        if (isLivePlaying && appData.liveVideoId) {
-          showBadge("● LIVE", "badge-live");
-          loadLiveChannel(appData.liveVideoId);
-        } else if (mainPlayer) {
-          mainPlayer.seekTo(resumeTime, true);
-          mainPlayer.playVideo();
+
+        if (mainPlayer) {
+          if (isLivePlaying) {
+            showBadge("● LIVE", "badge-live");
+            if (mainPlayer.unMute) {
+              mainPlayer.unMute();
+              mainPlayer.setVolume(100);
+            }
+            if (mainPlayer.playVideo) mainPlayer.playVideo();
+          } else {
+            if (mainPlayer.unMute) {
+              mainPlayer.unMute();
+              mainPlayer.setVolume(100);
+            }
+            mainPlayer.seekTo(resumeTime, true);
+            mainPlayer.playVideo();
+          }
+          scheduleNextAd();
         }
-        scheduleNextAd();
       });
     }
 
