@@ -21,7 +21,10 @@
     #main-layer { z-index: 10; }
     #ad-layer { z-index: 20; display: none; }
     .player-layer iframe { width: 100%; height: 100%; border: none; }
-
+<!-- Permanent Live News Player -->
+  <div id="live-layer" class="player-layer" style="z-index: 15; display: none;">
+    <iframe id="live-iframe" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
     /* Live / Ad Corner Badge */
     #status-badge {
       position: fixed; top: 22px; right: 26px; z-index: 35;
@@ -381,23 +384,38 @@
     });
 
     // --- 3. MODE & SMART ROTATION ENGINE ---
+function getLiveEmbedUrl(targetId) {
+      if (!targetId) return "about:blank";
+      if (targetId.startsWith("UC") && targetId.length === 24) {
+        return `https://www.youtube.com/embed/live_stream?channel=${targetId}&autoplay=1&controls=0&rel=0&modestbranding=1`;
+      }
+      return `https://www.youtube.com/embed/${targetId}?autoplay=1&controls=0&rel=0&modestbranding=1`;
+    }
+
     function handleModePlayback(tryResume) {
+      const liveLayer = document.getElementById("live-layer");
+      const liveFrame = document.getElementById("live-iframe");
+
       if (appData.tv.mode === "LIVE" && appData.liveVideoId) {
         isLivePlaying = true;
-        clearTimeout(adTimer);
-        if (isAdPlaying) {
-          document.getElementById("ad-layer").style.display = "none";
-          isAdPlaying = false;
-        }
+        pendingResumeTime = 0;
+        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
+
+        liveLayer.style.display = "block";
+        liveFrame.src = getLiveEmbedUrl(appData.liveVideoId);
         showBadge("● LIVE", "badge-live");
-        mainPlayer.loadVideoById(appData.liveVideoId);
+        scheduleNextAd(); // Live News odumbodhum Hospital Ad varum!
       } else {
         isLivePlaying = false;
+        liveFrame.src = "about:blank";
+        liveLayer.style.display = "none";
         hideBadge();
 
         if (tryResume && state.currentVideoId && isVideoStillInLibrary(state.currentVideoId)) {
-          mainPlayer.loadVideoById({ videoId: state.currentVideoId, startSeconds: Math.floor(state.currentTime || 0) });
+          pendingResumeTime = Math.floor(state.currentTime || 0);
+          mainPlayer.loadVideoById({ videoId: state.currentVideoId, startSeconds: pendingResumeTime });
         } else {
+          pendingResumeTime = 0;
           playNextProgram();
         }
         scheduleNextAd();
@@ -464,10 +482,9 @@
     function scheduleNextAd() {
       clearTimeout(adTimer);
       const mins = Number(appData.tv.adInterval) || 0;
-      if (mins <= 0 || isLivePlaying) return;
+      if (mins <= 0) return;
       adTimer = setTimeout(triggerHospitalAd, mins * 60 * 1000);
     }
-
     function getNextAdId() {
       const activeIds = (appData.ads || []).map(a => a.id);
       if (activeIds.length === 0) return null;
@@ -482,7 +499,7 @@
     }
 
     function triggerHospitalAd() {
-      if (isLivePlaying || isAdPlaying) return;
+      if (isAdPlaying) return;
       const adId = getNextAdId();
       if (!adId) {
         scheduleNextAd();
@@ -490,7 +507,11 @@
       }
 
       isAdPlaying = true;
-      if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+
+      if (isLivePlaying) {
+        // Live News audio overlap aagama temporary-a stop panrom
+        document.getElementById("live-iframe").src = "about:blank";
+      } else if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
         resumeTime = mainPlayer.getCurrentTime() || 0;
         mainPlayer.pauseVideo();
       }
@@ -498,23 +519,20 @@
       playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
         document.getElementById("ad-layer").style.display = "block";
         showBadge("HOSPITAL INFO", "badge-ad");
-        if (adPlayer && adPlayer.unMute && (!mainPlayer.isMuted || !mainPlayer.isMuted())) {
+        if (adPlayer && adPlayer.unMute) {
           adPlayer.unMute();
           adPlayer.setVolume(100);
-        } else if (adPlayer && adPlayer.mute) {
-          adPlayer.mute();
         }
         adPlayer.loadVideoById(adId);
       });
     }
-
     function onAdStateChange(event) {
       if (event.data === YT.PlayerState.ENDED && isAdPlaying) {
         finishAdAndResume();
       }
     }
 
-    function finishAdAndResume() {
+  function finishAdAndResume() {
       if (!isAdPlaying) return;
       hideBadge();
       if (adPlayer && adPlayer.stopVideo) adPlayer.stopVideo();
@@ -522,7 +540,13 @@
       playBumper("WELCOME BACK", "NOW PLAYING", () => {
         document.getElementById("ad-layer").style.display = "none";
         isAdPlaying = false;
-        if (!isLivePlaying && mainPlayer) {
+
+        if (isLivePlaying) {
+          // Thirumba Live News-kku immediate-a jump aagum!
+          document.getElementById("live-iframe").src = getLiveEmbedUrl(appData.liveVideoId);
+          showBadge("● LIVE", "badge-live");
+          scheduleNextAd();
+        } else if (mainPlayer) {
           mainPlayer.seekTo(resumeTime, true);
           mainPlayer.playVideo();
           scheduleNextAd();
