@@ -393,22 +393,18 @@ function getLiveEmbedUrl(targetId) {
     }
 
     function handleModePlayback(tryResume) {
-      const liveLayer = document.getElementById("live-layer");
-      const liveFrame = document.getElementById("live-iframe");
-
       if (appData.tv.mode === "LIVE" && appData.liveVideoId) {
         isLivePlaying = true;
         pendingResumeTime = 0;
-        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
-
-        liveLayer.style.display = "block";
-        liveFrame.src = getLiveEmbedUrl(appData.liveVideoId);
+        if (isAdPlaying) {
+          document.getElementById("ad-layer").style.display = "none";
+          isAdPlaying = false;
+        }
         showBadge("● LIVE", "badge-live");
-        scheduleNextAd(); // Live News odumbodhum Hospital Ad varum!
+        mainPlayer.loadVideoById(appData.liveVideoId);
+        scheduleNextAd(); // Live News odumbodhum Ad timer run aagum
       } else {
         isLivePlaying = false;
-        liveFrame.src = "about:blank";
-        liveLayer.style.display = "none";
         hideBadge();
 
         if (tryResume && state.currentVideoId && isVideoStillInLibrary(state.currentVideoId)) {
@@ -485,19 +481,33 @@ function getLiveEmbedUrl(targetId) {
       if (mins <= 0) return;
       adTimer = setTimeout(triggerHospitalAd, mins * 60 * 1000);
     }
-    function getNextAdId() {
-      const activeIds = (appData.ads || []).map(a => a.id);
-      if (activeIds.length === 0) return null;
 
-      state.adQueue = (state.adQueue || []).filter(id => activeIds.includes(id));
-      if (state.adQueue.length === 0) {
-        state.adQueue = shuffleArray([...activeIds]);
+    function triggerHospitalAd() {
+      if (isAdPlaying) return;
+      const adId = getNextAdId();
+      if (!adId) {
+        scheduleNextAd();
+        return;
       }
-      const adId = state.adQueue.shift();
-      saveState();
-      return adId;
-    }
 
+      isAdPlaying = true;
+      if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+        if (!isLivePlaying) resumeTime = mainPlayer.getCurrentTime() || 0;
+        mainPlayer.pauseVideo();
+      }
+
+      playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
+        document.getElementById("ad-layer").style.display = "block";
+        showBadge("HOSPITAL INFO", "badge-ad");
+        if (adPlayer && adPlayer.unMute && (!mainPlayer.isMuted || !mainPlayer.isMuted())) {
+          adPlayer.unMute();
+          adPlayer.setVolume(100);
+        } else if (adPlayer && adPlayer.mute) {
+          adPlayer.mute();
+        }
+        adPlayer.loadVideoById(adId);
+      });
+    }
     function triggerHospitalAd() {
       if (isAdPlaying) return;
       const adId = getNextAdId();
@@ -537,18 +547,17 @@ function getLiveEmbedUrl(targetId) {
       hideBadge();
       if (adPlayer && adPlayer.stopVideo) adPlayer.stopVideo();
 
-      playBumper("WELCOME BACK", "NOW PLAYING", () => {
+      playBumper("WELCOME BACK", isLivePlaying ? "LIVE NEWS" : "NOW PLAYING", () => {
         document.getElementById("ad-layer").style.display = "none";
         isAdPlaying = false;
-
-        if (isLivePlaying) {
-          // Thirumba Live News-kku immediate-a jump aagum!
-          document.getElementById("live-iframe").src = getLiveEmbedUrl(appData.liveVideoId);
-          showBadge("● LIVE", "badge-live");
-          scheduleNextAd();
-        } else if (mainPlayer) {
-          mainPlayer.seekTo(resumeTime, true);
-          mainPlayer.playVideo();
+        if (mainPlayer) {
+          if (isLivePlaying && appData.liveVideoId) {
+            showBadge("● LIVE", "badge-live");
+            mainPlayer.loadVideoById(appData.liveVideoId); // Jump back to live edge
+          } else {
+            mainPlayer.seekTo(resumeTime, true);
+            mainPlayer.playVideo();
+          }
           scheduleNextAd();
         }
       });
