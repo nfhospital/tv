@@ -393,19 +393,35 @@ function getLiveEmbedUrl(targetId) {
       return `https://www.youtube.com/embed/${targetId}?autoplay=1&controls=0&rel=0&modestbranding=1`;
     }
 
+    let liveAdTimerStarted = false;
+
     function handleModePlayback(tryResume) {
       if (appData.tv.mode === "LIVE" && appData.liveVideoId) {
+        const wasAlreadyLive = isLivePlaying;
         isLivePlaying = true;
         pendingResumeTime = 0;
+
         if (isAdPlaying) {
           document.getElementById("ad-layer").style.display = "none";
           isAdPlaying = false;
         }
+
         showBadge("● LIVE", "badge-live");
-        loadLiveChannel(appData.liveVideoId);
-        scheduleNextAd();
+
+        // Load live video only on initial switch or when live video ID changes
+        if (!wasAlreadyLive || mainPlayer.getVideoData().video_id !== appData.liveVideoId) {
+          stopLiveChannelLayer();
+          mainPlayer.loadVideoById(appData.liveVideoId);
+        }
+
+        // Start ad countdown ONLY once when entering LIVE mode (prevent 2-min sync reset!)
+        if (!liveAdTimerStarted) {
+          liveAdTimerStarted = true;
+          scheduleNextAd();
+        }
       } else {
         isLivePlaying = false;
+        liveAdTimerStarted = false;
         stopLiveChannelLayer();
         hideBadge();
 
@@ -494,10 +510,10 @@ function getLiveEmbedUrl(targetId) {
       isAdPlaying = true;
       if (isLivePlaying) {
         stopLiveChannelLayer();
-        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
+        if (mainPlayer && mainPlayer.stopVideo) mainPlayer.stopVideo();
       } else if (mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
         resumeTime = mainPlayer.getCurrentTime() || 0;
-        mainPlayer.pauseVideo();
+        if (mainPlayer.pauseVideo) mainPlayer.pauseVideo();
       }
 
       playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
