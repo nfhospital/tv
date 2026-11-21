@@ -262,7 +262,7 @@
             if (appData.tv.mode !== prevMode || (appData.tv.mode === "LIVE" && appData.liveVideoId !== prevLiveId)) {
               handleModePlayback(false);
             }
-            if (appData.tv.adInterval !== prevAdInterval && !isAdPlaying && !isLivePlaying) {
+            if (appData.tv.adInterval !== prevAdInterval && !isAdPlaying) {
               scheduleNextAd();
             }
           }
