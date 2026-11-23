@@ -13,32 +13,27 @@
       font-family: 'Poppins', sans-serif;
     }
 
-    /* TV Players */
     .player-layer {
       position: fixed; inset: 0; width: 100vw; height: 100vh;
       background: #000; pointer-events: none;
     }
     #main-layer { z-index: 10; }
-    #live-layer { z-index: 15; display: none; }
-    #ad-layer { z-index: 55; display: none; background: #000; }
+    #ad-layer { z-index: 30; display: none; }
     .player-layer iframe { width: 100%; height: 100%; border: none; }
-<!-- Permanent Live News Player -->
-  <div id="live-layer" class="player-layer" style="z-index: 15; display: none;">
-    <iframe id="live-iframe" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-  </div>
-    /* Live / Ad Corner Badge */
+
+    /* Top Right Live / Ad Badge */
     #status-badge {
-      position: fixed; top: 22px; right: 26px; z-index: 35;
-      padding: 6px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 700;
+      position: fixed; top: 22px; right: 26px; z-index: 40;
+      padding: 6px 18px; border-radius: 30px; font-size: 0.9rem; font-weight: 700;
       letter-spacing: 1px; text-transform: uppercase; display: none;
       backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
-    .badge-live { background: rgba(220, 38, 38, 0.9); color: #fff; animation: pulse 1.5s infinite; }
-    .badge-ad { background: rgba(7, 140, 128, 0.9); color: #fff; }
+    .badge-live { background: rgba(220, 38, 38, 0.92); color: #fff; animation: pulse 1.5s infinite; }
+    .badge-ad { background: rgba(7, 140, 128, 0.95); color: #fff; }
 
-    /* Small Unmute Pill (Shows ONLY if browser blocks sound) */
+    /* Unmute Pill (Appears only if browser blocks autoplay sound) */
     #unmute-pill {
-      position: fixed; bottom: 28px; right: 28px; z-index: 55;
+      position: fixed; bottom: 28px; right: 28px; z-index: 50;
       display: none; background: rgba(7, 140, 128, 0.95); color: #fff;
       border: 2px solid #5eead4; border-radius: 40px; padding: 12px 24px;
       font-size: 1rem; font-weight: 700; cursor: pointer;
@@ -46,7 +41,11 @@
     }
 
     /* Sun TV Style Broadcast Bumper Animation */
-    #bumper-overlay { z-index: 80; }
+    #bumper-overlay {
+      position: fixed; inset: 0; z-index: 70; display: none;
+      align-items: center; justify-content: center; overflow: hidden;
+      background: linear-gradient(135deg, #031f1d 0%, #078c80 50%, #042f2e 100%);
+    }
     .bumper-sweep {
       position: absolute; width: 160%; height: 160%;
       background: conic-gradient(from 0deg, transparent 0%, rgba(45, 212, 191, 0.28) 20%, transparent 40%, rgba(251, 191, 36, 0.22) 65%, transparent 85%);
@@ -80,17 +79,10 @@
     }
 
     @keyframes spinSweep { to { transform: rotate(360deg); } }
-    @keyframes ringExpand {
-      0% { transform: scale(0.4); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: scale(1.65); opacity: 0; }
-    }
-    @keyframes zoomFade {
-      0% { transform: scale(0.7); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
+    @keyframes ringExpand { 0% { transform: scale(0.4); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.65); opacity: 0; } }
+    @keyframes zoomFade { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     @keyframes barGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
     /* Dashboard */
     #dashboard {
@@ -110,9 +102,8 @@
     .tv-card p { color: #cbd5e1; font-size: 0.95rem; margin-bottom: 10px; }
     .tv-meta { font-size: 0.8rem; color: #fbbf24; font-weight: 600; }
 
-    /* Message Box */
     #msg-box {
-      position: fixed; inset: 0; z-index: 40; display: none;
+      position: fixed; inset: 0; z-index: 60; display: none;
       align-items: center; justify-content: center; text-align: center;
       background: #041010; padding: 30px;
     }
@@ -120,27 +111,24 @@
 </head>
 <body>
 
-  <!-- Dashboard View -->
+  <!-- Dashboard -->
   <div id="dashboard">
     <h1 class="dash-title">📺 Hospital Digital TV Control</h1>
-    <p class="dash-sub">Select a TV to launch its channel</p>
+    <p class="dash-sub">Select a TV to launch Live News / Programs + Hospital Ads</p>
     <div id="tv-grid" class="tv-grid"><p>Loading TVs...</p></div>
   </div>
 
-  <!-- Main Entertainment / Live Player -->
+  <!-- Main Player Layer (Live News / Playlist / Movie) -->
   <div id="main-layer" class="player-layer"><div id="main-player"></div></div>
-<!-- Permanent Channel Live Layer -->
-  <div id="live-layer" class="player-layer" style="z-index: 15; display: none;"></div>
-  <!-- Hospital Ad Overlay Player -->
+
+  <!-- Hospital Ad Overlay Layer -->
   <div id="ad-layer" class="player-layer"><div id="ad-player"></div></div>
 
-  <!-- Corner Badge -->
+  <!-- Badge & Unmute Button -->
   <div id="status-badge"></div>
-
-  <!-- Fallback Unmute Pill (Only appears if browser blocks sound) -->
   <button id="unmute-pill">🔇 Press OK for Sound</button>
 
-  <!-- Sun TV Style Bumper Animation -->
+  <!-- Bumper Animation -->
   <div id="bumper-overlay">
     <div class="bumper-sweep"></div>
     <div class="bumper-ring"></div>
@@ -151,52 +139,47 @@
     </div>
   </div>
 
-  <!-- Status / Error Message -->
+  <!-- Error Message -->
   <div id="msg-box"><h2 id="msg-text" style="color:#f87171; font-size:2rem;"></h2></div>
 
   <script>
     // =========================================================================
     // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
     // =========================================================================
-    const SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbyrKRdYKZ4hiS0DCCzKCIIo3vEI77NvXpptdF35Mlg3r3xQHs240UcW9ZHA-99k4wlf3g/exec";
+    const SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbzTnBGA8jwqy4uoBSqlrL4_fK41Wotd4F_s7BDR99lKiui6bD8_JM-LCaVYf_PkwQTCkw/exec";
     // =========================================================================
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const TV_ID = (urlParams.get("tv") || "").trim();
-    const STORAGE_KEY = "HOSP_TV_STATE_" + TV_ID;
+    const TV_ID = (new URLSearchParams(window.location.search).get("tv") || "").trim();
+    const STORAGE_KEY = "HOSP_TV_RESUME_" + TV_ID;
 
     let appData = null;
     let mainPlayer = null;
     let adPlayer = null;
-    let mainReady = false;
     let ytReady = false;
+    let mainReady = false;
+    let adReady = false;
     let started = false;
     let isAdPlaying = false;
-    let isLivePlaying = false;
+    let currentMediaSource = "";
+    let currentInterval = 0;
     let resumeTime = 0;
+    let pendingResumeTime = 0;
     let adTimer = null;
+    let adSafetyTimeout = null;
     let saveTimer = null;
+    let adQueue = [];
+    let knownAds = [];
     let audioCtx = null;
 
-   let state = {
-      patternIdx: 0,
-      countInStep: 0,
-      currentVideoId: "",
-      currentTime: 0,
-      queues: {},
-      adQueue: [],
-      knownAds: [],
-      knownLibs: {}
-    };
-
-    // --- 1. INITIALIZATION ---
     if (!TV_ID) {
       loadDashboard();
     } else {
-      loadSavedState();
-      loadYouTubeAPI();
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+
       fetchConfig(true);
-      setInterval(() => fetchConfig(false), 120000);
+      setInterval(() => fetchConfig(false), 120000); // Sync sheet every 2 mins
     }
 
     function loadDashboard() {
@@ -213,24 +196,18 @@
             <a class="tv-card" href="?tv=${encodeURIComponent(tv.id)}">
               <h2>${tv.id}</h2>
               <p>${tv.location}</p>
-              <div class="tv-meta">Mode: ${tv.mode} | Ads: ${tv.adInterval}m</div>
+              <div class="tv-meta">Ad Interval: Every ${tv.adInterval} mins</div>
             </a>
           `).join("");
         })
         .catch(() => {
-          document.getElementById("tv-grid").innerHTML = "<p style='color:#f87171'>Failed to connect to Google Sheet API.</p>";
+          document.getElementById("tv-grid").innerHTML = "<p style='color:#f87171'>Failed to connect to Sheet API.</p>";
         });
-    }
-
-    function loadYouTubeAPI() {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
     }
 
     function onYouTubeIframeAPIReady() {
       ytReady = true;
-      initPlayersIfReady();
+      initPlayers();
     }
 
     function fetchConfig(isInitial) {
@@ -241,115 +218,91 @@
             showMessage(res.message || "Configuration error");
             return;
           }
-          hideMessage();
-          const prevMode = appData ? appData.tv.mode : null;
-          const prevLiveId = appData ? appData.liveVideoId : null;
-          const prevAdInterval = appData ? appData.tv.adInterval : null;
           appData = res;
+          syncNewAds();
 
           if (appData.tv.status === "OFF") {
-            showMessage("TV is currently turned OFF in Master_TV_List.");
+            showMessage("TV is turned OFF in Master_TV_List.");
             if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
             return;
           }
+          if (!appData.mediaSource) {
+            showMessage("No active Live / Playlist / Video found in Master_TV_List.");
+            return;
+          }
+          hideMessage();
 
           if (isInitial) {
-            initPlayersIfReady();
+            initPlayers();
           } else if (started) {
-            if (appData.tv.mode !== prevMode || (appData.tv.mode === "LIVE" && appData.liveVideoId !== prevLiveId)) {
-              handleModePlayback(false);
+            // Switch media ONLY if source changed in sheet (or Live stream restarted)
+            if (appData.mediaSource !== currentMediaSource) {
+              currentMediaSource = appData.mediaSource;
+              if (!isAdPlaying && mainReady) {
+                loadMainMedia(false);
+              }
             }
-            if (appData.tv.adInterval !== prevAdInterval && !isAdPlaying) {
-              scheduleNextAd();
+            // Update ad timer ONLY if Ad Interval changed in sheet
+            if (appData.tv.adInterval !== currentInterval) {
+              currentInterval = appData.tv.adInterval;
+              if (!isAdPlaying) scheduleNextAd();
             }
           }
         })
-        .catch(err => console.error("API sync error:", err));
+        .catch(err => console.error("Sync error:", err));
     }
-// Pudhusa add aagura Ads & Videos-a wait pannama immediate-a queue-la serkkum
-    function syncNewItemsToQueues() {
-      if (!appData) return;
 
-      // 1. Hospital Ads (Regular + Today's Special Day Ads -> Direct-a FRONT-la add aagum)
-      const activeAdIds = (appData.ads || []).map(a => a.id);
-      if (!Array.isArray(state.knownAds)) state.knownAds = [];
-      if (state.knownAds.length === 0 && state.adQueue.length > 0) {
-        state.knownAds = [...state.adQueue];
-      }
-
-      const newAds = activeAdIds.filter(id => !state.knownAds.includes(id));
-      if (newAds.length > 0) {
-        state.adQueue = state.adQueue.filter(id => activeAdIds.includes(id));
-        // Pudhu ads-a shuffle panni queue-oda 1st-la vakkiradhu (Next break-laye play aagum!)
-        shuffleArray(newAds).forEach(id => {
-          if (!state.adQueue.includes(id)) state.adQueue.unshift(id);
-        });
-      }
-      state.knownAds = [...activeAdIds];
-
-      // 2. Movies / Songs / Comedy / Programs (Running queue-la random-a mix aagum)
-      if (!state.knownLibs) state.knownLibs = {};
-      Object.keys(appData.libraries || {}).forEach(cat => {
-        const pool = appData.libraries[cat] || [];
-        const prevKnown = state.knownLibs[cat] || [];
-
-        if (prevKnown.length > 0 && Array.isArray(state.queues[cat])) {
-          const newVids = pool.filter(id => !prevKnown.includes(id));
-          newVids.forEach(id => {
-            if (!state.queues[cat].includes(id)) {
-              const randIdx = Math.floor(Math.random() * (state.queues[cat].length + 1));
-              state.queues[cat].splice(randIdx, 0, id);
-            }
-          });
-        }
-        state.knownLibs[cat] = [...pool];
-      });
-
-      saveState();
-    }
-    function initPlayersIfReady() {
+    function initPlayers() {
       if (!ytReady || !appData || mainPlayer) return;
 
       mainPlayer = new YT.Player("main-player", {
-        host: "https://www.youtube-nocookie.com",
         playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, disablekb: 1 },
         events: {
-          onReady: () => {
-            mainReady = true;
-            autoStartTV();
-          },
+          onReady: () => { mainReady = true; tryStartTV(); },
           onStateChange: onMainStateChange,
-          onError: () => { if (!isLivePlaying) setTimeout(playNextProgram, 1000); }
+          onError: () => {
+            if (currentMediaSource.startsWith("LIVE:")) {
+              setTimeout(() => fetchConfig(false), 10000);
+            } else if (currentMediaSource.startsWith("PLAYLIST:") && mainPlayer.nextVideo) {
+              setTimeout(() => mainPlayer.nextVideo(), 1000);
+            }
+          }
         }
       });
 
       adPlayer = new YT.Player("ad-player", {
-        host: "https://www.youtube-nocookie.com",
-        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, disablekb: 1 },
+        playerVars: { autoplay: 0, controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, disablekb: 1 },
         events: {
-          onStateChange: onAdStateChange,
-          onError: () => { if (isAdPlaying) finishAdAndResume(); }
+          onReady: () => { adReady = true; },
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED && isAdPlaying) {
+              finishAdAndResume();
+            }
+          },
+          onError: () => {
+            if (isAdPlaying) finishAdAndResume();
+          }
         }
       });
     }
 
-    // --- 2. AUTOMATIC START (NO START BUTTON REQUIRED) ---
-    function autoStartTV() {
-      if (started || !mainReady || !appData) return;
+    function tryStartTV() {
+      if (started || !mainReady || !appData || !appData.mediaSource) return;
       started = true;
+      currentMediaSource = appData.mediaSource;
+      currentInterval = appData.tv.adInterval;
 
-      // Try unmuted auto-start first
       mainPlayer.unMute();
       mainPlayer.setVolume(100);
-      handleModePlayback(true);
-      startStateSaver();
+      loadMainMedia(true);
+      scheduleNextAd();
+      startResumeSaver();
 
-      // Check after 2.5 seconds if browser blocked unmuted autoplay
+      // Check if browser muted autoplay
       setTimeout(() => {
         if (!mainPlayer || typeof mainPlayer.getPlayerState !== "function") return;
-        const pState = mainPlayer.getPlayerState();
-        // If browser paused it (-1 unstarted or 2 paused or 5 cued), start muted & show subtle unmute pill
-        if (pState !== YT.PlayerState.PLAYING && pState !== YT.PlayerState.BUFFERING) {
+        const st = mainPlayer.getPlayerState();
+        if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
           mainPlayer.mute();
           mainPlayer.playVideo();
           document.getElementById("unmute-pill").style.display = "block";
@@ -359,139 +312,121 @@
       }, 2500);
     }
 
+    function loadMainMedia(tryResume) {
+      pendingResumeTime = 0;
+
+      if (currentMediaSource.startsWith("LIVE:")) {
+        const vid = currentMediaSource.replace("LIVE:", "");
+        showBadge("● LIVE NEWS", "badge-live");
+        mainPlayer.loadVideoById(vid);
+
+      } else if (currentMediaSource.startsWith("PLAYLIST:")) {
+        const listId = currentMediaSource.replace("PLAYLIST:", "");
+        hideBadge();
+        mainPlayer.loadPlaylist({ list: listId, listType: "playlist" });
+        setTimeout(() => {
+          if (mainPlayer && mainPlayer.setShuffle) mainPlayer.setShuffle(true);
+          if (mainPlayer && mainPlayer.setLoop) mainPlayer.setLoop(true);
+        }, 1500);
+
+      } else if (currentMediaSource.startsWith("VIDEO:")) {
+        const vid = currentMediaSource.replace("VIDEO:", "");
+        hideBadge();
+        let startSec = 0;
+        if (tryResume) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+            if (saved.vid === vid && saved.time > 5) {
+              startSec = Math.floor(saved.time);
+              pendingResumeTime = startSec;
+            }
+          } catch (e) {}
+        }
+        mainPlayer.loadVideoById({ videoId: vid, startSeconds: startSec });
+      }
+    }
+
+    function onMainStateChange(e) {
+      // Ensure exact second resume on single movie after power cut
+      if (e.data === YT.PlayerState.PLAYING && pendingResumeTime > 5 && !isAdPlaying) {
+        const cur = mainPlayer.getCurrentTime ? mainPlayer.getCurrentTime() : 0;
+        if (Math.abs(cur - pendingResumeTime) > 10) {
+          mainPlayer.seekTo(pendingResumeTime, true);
+        }
+        pendingResumeTime = 0;
+      }
+      // Loop single movie when finished
+      if (e.data === YT.PlayerState.ENDED && !isAdPlaying && currentMediaSource.startsWith("VIDEO:")) {
+        localStorage.removeItem(STORAGE_KEY);
+        mainPlayer.seekTo(0, true);
+        mainPlayer.playVideo();
+      }
+    }
+
+    function startResumeSaver() {
+      clearInterval(saveTimer);
+      saveTimer = setInterval(() => {
+        if (!isAdPlaying && pendingResumeTime === 0 && currentMediaSource.startsWith("VIDEO:") && mainPlayer && mainPlayer.getCurrentTime) {
+          const st = mainPlayer.getPlayerState ? mainPlayer.getPlayerState() : -1;
+          if (st === YT.PlayerState.PLAYING) {
+            const t = mainPlayer.getCurrentTime();
+            if (t > 5) {
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                  vid: currentMediaSource.replace("VIDEO:", ""),
+                  time: t
+                }));
+              } catch (e) {}
+            }
+          }
+        }
+      }, 5000);
+    }
+
+    // Unlock Sound on OK/Click
     function unlockAudio() {
       document.getElementById("unmute-pill").style.display = "none";
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioCtx.resume();
       } catch (e) {}
-      if (mainPlayer && mainPlayer.unMute) {
+      if (!isAdPlaying && mainPlayer && mainPlayer.unMute) {
         mainPlayer.unMute();
         mainPlayer.setVolume(100);
       }
-      if (adPlayer && adPlayer.unMute) {
+      if (isAdPlaying && adPlayer && adPlayer.unMute) {
         adPlayer.unMute();
         adPlayer.setVolume(100);
       }
     }
-
     document.getElementById("unmute-pill").addEventListener("click", unlockAudio);
     document.addEventListener("click", unlockAudio);
-    document.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") unlockAudio();
-    });
+    document.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") unlockAudio(); });
 
-    // --- 3. MODE & SMART ROTATION ENGINE ---
-function getLiveEmbedUrl(targetId) {
-      if (!targetId) return "about:blank";
-      if (targetId.startsWith("UC") && targetId.length === 24) {
-        return `https://www.youtube.com/embed/live_stream?channel=${targetId}&autoplay=1&controls=0&rel=0&modestbranding=1`;
+    // --- HOSPITAL AD ENGINE ---
+    function syncNewAds() {
+      const activeIds = (appData.ads || []).map(a => a.id);
+      const newOnes = activeIds.filter(id => !knownAds.includes(id));
+      adQueue = adQueue.filter(id => activeIds.includes(id));
+      if (newOnes.length > 0) {
+        shuffleArray(newOnes).forEach(id => {
+          if (!adQueue.includes(id)) adQueue.unshift(id); // New / Today's special ad plays FIRST
+        });
       }
-      return `https://www.youtube.com/embed/${targetId}?autoplay=1&controls=0&rel=0&modestbranding=1`;
+      knownAds = [...activeIds];
     }
 
-    let liveAdTimerStarted = false;
-
-    function handleModePlayback(tryResume) {
-      if (appData.tv.mode === "LIVE" && appData.liveVideoId) {
-        const wasAlreadyLive = isLivePlaying;
-        isLivePlaying = true;
-        pendingResumeTime = 0;
-
-        if (isAdPlaying) {
-          document.getElementById("ad-layer").style.display = "none";
-          isAdPlaying = false;
-        }
-
-        showBadge("● LIVE", "badge-live");
-
-        // Load live video only on initial switch or when live video ID changes
-        if (!wasAlreadyLive || mainPlayer.getVideoData().video_id !== appData.liveVideoId) {
-          stopLiveChannelLayer();
-          mainPlayer.loadVideoById(appData.liveVideoId);
-        }
-
-        // Start ad countdown ONLY once when entering LIVE mode (prevent 2-min sync reset!)
-        if (!liveAdTimerStarted) {
-          liveAdTimerStarted = true;
-          scheduleNextAd();
-        }
-      } else {
-        isLivePlaying = false;
-        liveAdTimerStarted = false;
-        stopLiveChannelLayer();
-        hideBadge();
-
-        if (tryResume && state.currentVideoId && isVideoStillInLibrary(state.currentVideoId)) {
-          pendingResumeTime = Math.floor(state.currentTime || 0);
-          mainPlayer.loadVideoById({ videoId: state.currentVideoId, startSeconds: pendingResumeTime });
-        } else {
-          pendingResumeTime = 0;
-          playNextProgram();
-        }
-        scheduleNextAd();
-      }
-    }
-    function playNextProgram() {
-      if (!appData || !appData.pattern.length) return;
-      const pattern = appData.pattern;
-
-      for (let attempt = 0; attempt < pattern.length; attempt++) {
-        if (state.patternIdx >= pattern.length) {
-          state.patternIdx = 0;
-          state.countInStep = 0;
-        }
-        const step = pattern[state.patternIdx];
-        const vid = getNextFromCategory(step.category);
-
-        state.countInStep++;
-        if (state.countInStep >= step.count) {
-          state.patternIdx = (state.patternIdx + 1) % pattern.length;
-          state.countInStep = 0;
-        }
-
-        if (vid) {
-          state.currentVideoId = vid;
-          state.currentTime = 0;
-          saveState();
-          mainPlayer.loadVideoById(vid);
-          return;
-        }
-      }
-      showMessage("No videos found in configured sheets. Please add YouTube links.");
+    function getNextAdId() {
+      const activeIds = (appData.ads || []).map(a => a.id);
+      if (activeIds.length === 0) return null;
+      adQueue = adQueue.filter(id => activeIds.includes(id));
+      if (adQueue.length === 0) adQueue = shuffleArray([...activeIds]);
+      return adQueue.shift();
     }
 
-    function getNextFromCategory(category) {
-      const pool = (appData.libraries && appData.libraries[category]) ? appData.libraries[category] : [];
-      if (pool.length === 0) return null;
-
-      let q = (state.queues[category] || []).filter(id => pool.includes(id));
-      if (q.length === 0) {
-        q = shuffleArray([...pool]);
-        if (q.length > 1 && q[0] === state.currentVideoId) {
-          q.push(q.shift());
-        }
-      }
-      const nextId = q.shift();
-      state.queues[category] = q;
-      return nextId;
-    }
-
-    function isVideoStillInLibrary(vid) {
-      if (!appData || !appData.libraries) return false;
-      return Object.values(appData.libraries).some(arr => arr.includes(vid));
-    }
-
-    function onMainStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED && !isLivePlaying && !isAdPlaying) {
-        playNextProgram();
-      }
-    }
-
-    // --- 4. HOSPITAL ADS + SUN TV BUMPER ANIMATION ---
     function scheduleNextAd() {
       clearTimeout(adTimer);
-      const mins = Number(appData.tv.adInterval) || 0;
+      const mins = Number(currentInterval) || 0;
       if (mins <= 0) return;
       adTimer = setTimeout(triggerHospitalAd, mins * 60 * 1000);
     }
@@ -499,73 +434,73 @@ function getLiveEmbedUrl(targetId) {
     function triggerHospitalAd() {
       if (isAdPlaying) return;
       const adId = getNextAdId();
-      if (!adId) {
+      if (!adId || !adReady) {
         scheduleNextAd();
         return;
       }
 
       isAdPlaying = true;
+      const isLive = currentMediaSource.startsWith("LIVE:");
+      const wasMuted = mainPlayer && mainPlayer.isMuted ? mainPlayer.isMuted() : false;
 
-      // Save main video time only in AUTO mode; in LIVE mode just mute it cleanly
-      if (!isLivePlaying && mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
+      if (isLive) {
+        if (mainPlayer && mainPlayer.mute) mainPlayer.mute();
+      } else if (mainPlayer && mainPlayer.getCurrentTime) {
         resumeTime = mainPlayer.getCurrentTime() || 0;
         if (mainPlayer.pauseVideo) mainPlayer.pauseVideo();
-      } else if (mainPlayer && mainPlayer.mute) {
-        mainPlayer.mute();
       }
 
       playBumper("HEALTH UPDATE", "SHORT BREAK", () => {
-        const adLayer = document.getElementById("ad-layer");
-        adLayer.style.display = "block";
+        document.getElementById("ad-layer").style.display = "block";
         showBadge("HOSPITAL INFO", "badge-ad");
 
-        if (adPlayer && adPlayer.unMute) {
+        if (!wasMuted) {
           adPlayer.unMute();
           adPlayer.setVolume(100);
+        } else {
+          adPlayer.mute();
         }
-        if (adPlayer && adPlayer.loadVideoById) {
-          adPlayer.loadVideoById(adId);
-        }
+        adPlayer.loadVideoById(adId);
+
+        // Safety fallback: Auto-resume after 95 seconds if ad gets stuck
+        clearTimeout(adSafetyTimeout);
+        adSafetyTimeout = setTimeout(() => {
+          if (isAdPlaying) finishAdAndResume();
+        }, 95000);
       });
     }
-    function onAdStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED && isAdPlaying) {
-        finishAdAndResume();
-      }
-    }
 
-function finishAdAndResume() {
+    function finishAdAndResume() {
       if (!isAdPlaying) return;
+      clearTimeout(adSafetyTimeout);
       hideBadge();
+
       if (adPlayer && adPlayer.stopVideo) {
         try { adPlayer.stopVideo(); } catch (e) {}
       }
 
-      playBumper("WELCOME BACK", isLivePlaying ? "LIVE NEWS" : "NOW PLAYING", () => {
+      const isLive = currentMediaSource.startsWith("LIVE:");
+      playBumper("WELCOME BACK", isLive ? "LIVE NEWS" : "NOW PLAYING", () => {
         document.getElementById("ad-layer").style.display = "none";
         isAdPlaying = false;
 
         if (mainPlayer) {
-          if (isLivePlaying) {
-            showBadge("● LIVE", "badge-live");
-            if (mainPlayer.unMute) {
-              mainPlayer.unMute();
-              mainPlayer.setVolume(100);
-            }
-            if (mainPlayer.playVideo) mainPlayer.playVideo();
+          const allowSound = document.getElementById("unmute-pill").style.display === "none";
+          if (isLive) {
+            showBadge("● LIVE NEWS", "badge-live");
+            if (allowSound) { mainPlayer.unMute(); mainPlayer.setVolume(100); }
+            mainPlayer.playVideo();
           } else {
-            if (mainPlayer.unMute) {
-              mainPlayer.unMute();
-              mainPlayer.setVolume(100);
-            }
+            if (allowSound) { mainPlayer.unMute(); mainPlayer.setVolume(100); }
             mainPlayer.seekTo(resumeTime, true);
             mainPlayer.playVideo();
           }
-          scheduleNextAd();
         }
+        scheduleNextAd();
       });
     }
 
+    // --- BUMPER ANIMATION ---
     function playBumper(kicker, title, callback) {
       const overlay = document.getElementById("bumper-overlay");
       document.getElementById("bumper-kicker").textContent = kicker;
@@ -575,31 +510,14 @@ function finishAdAndResume() {
       void overlay.offsetWidth;
       overlay.style.display = "flex";
 
-      playBroadcastChime();
+      playChime();
       setTimeout(() => {
         overlay.style.display = "none";
         if (callback) callback();
       }, 2400);
     }
-function loadLiveChannel(liveVal) {
-      const liveLayer = document.getElementById("live-layer");
-      if (liveVal.startsWith("CHANNEL:")) {
-        const chId = liveVal.replace("CHANNEL:", "");
-        if (mainPlayer && mainPlayer.pauseVideo) mainPlayer.pauseVideo();
-        liveLayer.style.display = "block";
-        liveLayer.innerHTML = `<iframe src="https://www.youtube.com/embed/live_stream?channel=${chId}&autoplay=1&controls=0&rel=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-      } else {
-        liveLayer.style.display = "none";
-        liveLayer.innerHTML = "";
-        mainPlayer.loadVideoById(liveVal);
-      }
-    }
-    function stopLiveChannelLayer() {
-      const liveLayer = document.getElementById("live-layer");
-      liveLayer.style.display = "none";
-      liveLayer.innerHTML = "";
-    }
-    function playBroadcastChime() {
+
+    function playChime() {
       if (!audioCtx || audioCtx.state !== "running") return;
       const notes = [523.25, 659.25, 783.99, 1046.50];
       const now = audioCtx.currentTime;
@@ -618,31 +536,6 @@ function loadLiveChannel(liveVal) {
       });
     }
 
-    // --- 5. POWER-CUT AUTO-SAVE & HELPERS ---
-    function startStateSaver() {
-      clearInterval(saveTimer);
-      saveTimer = setInterval(() => {
-        if (!isAdPlaying && !isLivePlaying && mainPlayer && typeof mainPlayer.getCurrentTime === "function") {
-          const t = mainPlayer.getCurrentTime();
-          if (t > 1) {
-            state.currentTime = t;
-            saveState();
-          }
-        }
-      }, 5000);
-    }
-
-    function saveState() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-    }
-
-    function loadSavedState() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) state = Object.assign(state, JSON.parse(saved));
-      } catch (e) {}
-    }
-
     function shuffleArray(arr) {
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -650,18 +543,12 @@ function loadLiveChannel(liveVal) {
       }
       return arr;
     }
-
-    function showBadge(text, cls) {
+    function showBadge(txt, cls) {
       const b = document.getElementById("status-badge");
-      b.textContent = text;
-      b.className = cls;
-      b.style.display = "block";
+      b.textContent = txt; b.className = cls; b.style.display = "block";
     }
     function hideBadge() { document.getElementById("status-badge").style.display = "none"; }
-    function showMessage(txt) {
-      document.getElementById("msg-text").textContent = txt;
-      document.getElementById("msg-box").style.display = "flex";
-    }
+    function showMessage(txt) { document.getElementById("msg-text").textContent = txt; document.getElementById("msg-box").style.display = "flex"; }
     function hideMessage() { document.getElementById("msg-box").style.display = "none"; }
   </script>
 </body>
